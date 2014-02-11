@@ -21,10 +21,9 @@
 						<configuration>
 							<wsdlOptions>
 								<wsdlOption>
-									<wsdl>src/xsd/test.wsdl</wsdl>
+									<wsdl>src/xsd/ContentServiceTraversalService.wsdl</wsdl>
 									<extraargs>
 										<extraarg>-xjc-Xxew</extraarg>
-										<extraarg>-xjc-Xxew:summary target/summary.txt</extraarg>
 										<extraarg>-xjc-Xxew:instantiate lazy</extraarg>
 										<extraarg>-xjc-Xxew:delete</extraarg>
 									</extraargs>
@@ -40,7 +39,7 @@
 					<dependency>
 						<groupId>com.github.jaxb-xew-plugin</groupId>
 						<artifactId>jaxb-xew-plugin</artifactId>
-						<version>1.2</version>
+						<version>1.2-SNAPSHOT</version>
 					</dependency>
 					<dependency>
 						<groupId>com.sun.xml.bind</groupId>
