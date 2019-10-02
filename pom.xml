@@ -5,7 +5,7 @@
 
 	<groupId>com.github.jaxb-xew-plugin</groupId>
 	<artifactId>jaxb-xew-plugin</artifactId>
-	<version>1.12-SNAPSHOT</version>
+	<version>1.12-X-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>JAXB @XmlElementWrapper Plugin</name>
