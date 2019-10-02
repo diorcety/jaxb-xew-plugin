@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="map-attribute.xsd">
+	<data>
+		<entry key="id123">this is a value</entry>
+		<entry key="id312">this is another value</entry>
+	</data>
+</message>

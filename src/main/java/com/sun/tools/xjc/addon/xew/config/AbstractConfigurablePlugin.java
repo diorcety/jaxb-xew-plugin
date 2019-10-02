@@ -13,6 +13,8 @@ import com.sun.tools.xjc.model.CCustomizations;
 import com.sun.tools.xjc.model.CPluginCustomization;
 import com.sun.tools.xjc.outline.Outline;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.LogFactory;
 import org.jvnet.jaxb2_commons.plugin.AbstractParameterizablePlugin;
 import org.w3c.dom.NamedNodeMap;
@@ -199,6 +201,12 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 		case COLLECTION_INTERFACE:
 			configuration.setCollectionInterfaceClass(Class.forName(value));
 			break;
+		case MAP_IMPLEMENTATION:
+			configuration.setMapImplClass(Class.forName(value));
+			break;
+		case MAP_INTERFACE:
+			configuration.setMapInterfaceClass(Class.forName(value));
+			break;
 		case INSTANTIATION_MODE:
 			try {
 				configuration.setInstantiationMode(CommonConfiguration.InstantiationMode.valueOf(value.toUpperCase()));
@@ -209,6 +217,18 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 			break;
 		case APPLY_PLURAL_FORM:
 			configuration.setApplyPluralForm(Boolean.parseBoolean(value));
+			break;
+		case TO_MAP:
+			if (!(configuration instanceof ClassConfiguration)) {
+				throw new IllegalArgumentException("The option " + option + " is not applicable");
+			}
+			String[] split = StringUtils.stripAll(value.split(","));
+			if (split.length < 1 || split.length > 2) {
+				throw new IllegalArgumentException("The option " + option + " is not valid");
+			}
+			String k = split[0];
+			String v = split.length == 2? split[1] : null;
+			((ClassConfiguration) configuration).setToMap(Pair.of(k, v));
 			break;
 		case ANNOTATE:
 			if (!(configuration instanceof ClassConfiguration)) {

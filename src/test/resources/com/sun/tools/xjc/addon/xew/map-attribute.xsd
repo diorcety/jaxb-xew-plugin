@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema
+		jaxb:version="2.0"
+		xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+		xmlns:xew="http://github.com/jaxb-xew-plugin"
+		xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+		jaxb:extensionBindingPrefixes="xew"
+		elementFormDefault="qualified"
+>
+	<xsd:annotation>
+		<xsd:appinfo>
+			<jaxb:schemaBindings>
+				<jaxb:package name="map_attribute"/>
+			</jaxb:schemaBindings>
+		</xsd:appinfo>
+	</xsd:annotation>
+
+	<xsd:element name="message">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="data">
+					<xsd:annotation>
+						<xsd:appinfo>
+							<xew:xew toMap="key,value"/>
+						</xsd:appinfo>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="entry" minOccurs="0" maxOccurs="unbounded">
+								<xsd:complexType>
+									<xsd:simpleContent>
+										<xsd:extension base="xsd:string">
+											<xsd:attribute name="key" type="xsd:string"/>
+										</xsd:extension>
+									</xsd:simpleContent>
+								</xsd:complexType>
+							</xsd:element>
+						</xsd:sequence>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+</xsd:schema>

@@ -181,6 +181,16 @@ public class XmlElementWrapperPluginTest {
 	}
 
 	@Test
+	public void testMap() throws Exception {
+		runTest("map", new String[] { "-quiet", "-Xxew:plural" }, false, "Message", "package-info");
+	}
+
+	@Test
+	public void testMapAttribute() throws Exception {
+		runTest("map-attribute", new String[] { "-quiet", "-Xxew:plural" }, false, "Message", "package-info");
+	}
+
+	@Test
 	public void testElementAnyType() throws Exception {
 		runTest("element-any-type", new String[] { "-Xxew:plural" }, false, "Conversion", "Entry", "package-info");
 	}

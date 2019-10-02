@@ -55,6 +55,7 @@ import javax.xml.bind.annotation.XmlElements;
 import javax.xml.bind.annotation.XmlMixed;
 import javax.xml.bind.annotation.XmlSchema;
 import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import javax.xml.namespace.QName;
 
@@ -62,18 +63,23 @@ import com.sun.codemodel.JAnnotatable;
 import com.sun.codemodel.JAnnotationArrayMember;
 import com.sun.codemodel.JAnnotationUse;
 import com.sun.codemodel.JAnnotationValue;
+import com.sun.codemodel.JBlock;
 import com.sun.codemodel.JClass;
+import com.sun.codemodel.JClassAlreadyExistsException;
 import com.sun.codemodel.JClassContainer;
 import com.sun.codemodel.JCodeModel;
 import com.sun.codemodel.JDefinedClass;
 import com.sun.codemodel.JExpr;
 import com.sun.codemodel.JExpression;
 import com.sun.codemodel.JFieldVar;
+import com.sun.codemodel.JForEach;
 import com.sun.codemodel.JInvocation;
 import com.sun.codemodel.JJavaName;
 import com.sun.codemodel.JMethod;
 import com.sun.codemodel.JMod;
 import com.sun.codemodel.JPackage;
+import com.sun.codemodel.JType;
+import com.sun.codemodel.JVar;
 import com.sun.tools.xjc.Options;
 import com.sun.tools.xjc.addon.xew.config.AbstractConfigurablePlugin;
 import com.sun.tools.xjc.addon.xew.config.ClassConfiguration;
@@ -120,10 +126,12 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 		final JClass xmlElementRefsModelClass = codeModel.ref(XmlElementRefs.class);
 		final JClass xmlElementsModelClass = codeModel.ref(XmlElements.class);
 		final JClass xmlJavaTypeAdapterModelClass = codeModel.ref(XmlJavaTypeAdapter.class);
+		final JClass xmlAdapterModelClass = codeModel.ref(XmlAdapter.class);
 		final JClass xmlTypeModelClass = codeModel.ref(XmlType.class);
 		final JClass xmlElementDeclModelClass = codeModel.ref(XmlElementDecl.class);
 		final JClass jaxbElementModelClass = codeModel.ref(JAXBElement.class);
 		final JClass qNameModelClass = codeModel.ref(QName.class);
+		final JClass mapEntryModelClass = codeModel.ref(Map.Entry.class);
 
 		Ring.begin();
 		Ring.add(outline.getModel());
@@ -253,19 +261,58 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				modificationCount++;
 
 				// The container class has to be deleted. Check that inner class has to be moved to it's parent.
-				if (moveInnerClassToParent(outline, candidate)) {
+				if (fieldConfiguration.toMap() == null && moveInnerClassToParent(outline, candidate)) {
 					modificationCount++;
 				}
 
-				List<JClass> fieldTypeParametrisations = candidate.getFieldClass().getTypeParameters();
+				List<JClass> fieldTypeParametrisations;
+				if (fieldConfiguration.toMap() == null) {
+					fieldTypeParametrisations = candidate.getFieldClass().getTypeParameters();
+				}
+				else {
+					fieldTypeParametrisations = new ArrayList<JClass>(2);
+					JFieldVar keyFieldVar = candidate.getFieldParametrisationImpl().fields().get(fieldConfiguration.toMap().getKey());
+					if (keyFieldVar == null) {
+						throw new IllegalArgumentException("Invalid field: " + fieldConfiguration.toMap().getKey() + " in " + candidate.getClassName());
+					}
+					JType keyType = keyFieldVar.type();
+
+					String value = fieldConfiguration.toMap().getValue();
+					if (value == null) {
+						value = "value";
+					}
+					JFieldVar valueFieldVar = candidate.getFieldParametrisationImpl().fields().get(value);
+					JType type;
+					if (valueFieldVar == null) {
+						type = candidate.getFieldParametrisationImpl();
+					} else {
+						type = valueFieldVar.type();
+					}
+					fieldTypeParametrisations.add(keyType.boxify());
+					fieldTypeParametrisations.add(type.boxify());
+				}
 
 				// Create the new interface and collection classes using the specified interface and
 				// collection classes (configuration) with an element type corresponding to
 				// the element type from the collection present in the candidate class (narrowing).
-				JClass collectionInterfaceClass = codeModel.ref(fieldConfiguration.getCollectionInterfaceClass())
-				            .narrow(fieldTypeParametrisations);
-				JClass collectionImplClass = codeModel.ref(fieldConfiguration.getCollectionImplClass())
-				            .narrow(fieldTypeParametrisations);
+				JClass interfaceClass;
+				JClass implClass;
+				if (fieldConfiguration.toMap() == null) {
+					interfaceClass = codeModel.ref(fieldConfiguration.getCollectionInterfaceClass())
+							.narrow(fieldTypeParametrisations);
+					implClass = codeModel.ref(fieldConfiguration.getCollectionImplClass())
+							.narrow(fieldTypeParametrisations);
+				}
+				else {
+					interfaceClass = codeModel.ref(fieldConfiguration.getMapInterfaceClass())
+							.narrow(fieldTypeParametrisations);
+					implClass = codeModel.ref(fieldConfiguration.getMapImplClass())
+							.narrow(fieldTypeParametrisations);
+				}
+
+				if (fieldConfiguration.toMap() != null) {
+					candidate.unmarkForRemoval();
+				}
 
 				boolean pluralFormWasApplied = false;
 
@@ -304,17 +351,23 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				}
 
 				// Transform the field accordingly.
-				originalImplField.type(collectionInterfaceClass);
+				originalImplField.type(interfaceClass);
 
 				// If instantiation is specified to be "early", add code for creating new instance of the collection class.
 				if (fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.EARLY) {
 					logger.debug("Applying EARLY instantiation...");
 					// GENERATED CODE: ... fieldName = new C<T>();
-					originalImplField.init(JExpr._new(collectionImplClass));
+					originalImplField.init(JExpr._new(implClass));
 				}
 
 				// Annotate the field with the @XmlElementWrapper annotation using the original field name.
-				JAnnotationUse xmlElementWrapperAnnotation = originalImplField.annotate(xmlElementWrapperModelClass);
+				JAnnotationUse xmlElementWrapperAnnotation;
+				if (fieldConfiguration.toMap() == null) {
+					xmlElementWrapperAnnotation = originalImplField.annotate(xmlElementWrapperModelClass);
+				}
+				else {
+					xmlElementWrapperAnnotation = originalImplField.annotate(xmlElementModelClass);
+				}
 				JAnnotationUse xmlElementOriginalAnnotation = getAnnotation(originalImplField, xmlElementModelClass);
 
 				// xmlElementOriginalAnnotation can be null:
@@ -349,79 +402,85 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 					removeAnnotation(originalImplField, xmlElementOriginalAnnotation);
 				}
 
-				boolean xmlElementInfoWasTransferred = false;
+				if (fieldConfiguration.toMap() == null) {
+					boolean xmlElementInfoWasTransferred = false;
 
-				// Transfer @XmlAnyElement, @XmlElementRefs, @XmlElements:
-				for (JClass annotationModelClass : new JClass[] { xmlAnyElementModelClass, xmlMixedModelClass,
-				        xmlElementRefModelClass, xmlElementRefsModelClass, xmlElementsModelClass }) {
-					JAnnotationUse annotation = getAnnotation(candidate.getField(), annotationModelClass);
+					// Transfer @XmlAnyElement, @XmlElementRefs, @XmlElements:
+					for (JClass annotationModelClass : new JClass[]{xmlAnyElementModelClass, xmlMixedModelClass,
+					        xmlElementRefModelClass, xmlElementRefsModelClass, xmlElementsModelClass}) {
+						JAnnotationUse annotation = getAnnotation(candidate.getField(), annotationModelClass);
 
-					if (annotation != null) {
-						if (candidate.getFieldTargetNamespace() != null) {
-							JAnnotationArrayMember annotationArrayMember = (JAnnotationArrayMember) getAnnotationMember(
-							            annotation, "value");
+						if (annotation != null) {
+							if (candidate.getFieldTargetNamespace() != null) {
+								JAnnotationArrayMember annotationArrayMember = (JAnnotationArrayMember) getAnnotationMember(
+								        annotation, "value");
 
-							if (annotationArrayMember != null) {
-								for (JAnnotationUse subAnnotation : annotationArrayMember.annotations()) {
-									if (getAnnotationMemberExpression(subAnnotation, "namespace") == null) {
-										subAnnotation.param("namespace", candidate.getFieldTargetNamespace());
+								if (annotationArrayMember != null) {
+									for (JAnnotationUse subAnnotation : annotationArrayMember.annotations()) {
+										if (getAnnotationMemberExpression(subAnnotation, "namespace") == null) {
+											subAnnotation.param("namespace", candidate.getFieldTargetNamespace());
+										}
 									}
 								}
 							}
+
+							xmlElementInfoWasTransferred = true;
+
+							addAnnotation(originalImplField, annotation);
+						}
+					}
+
+					if (!xmlElementInfoWasTransferred) {
+						// Annotate the field with the @XmlElement annotation using the field name from the wrapped type as name.
+						// We cannot just re-use the same annotation object instance, as for example, we need to set XML name and this
+						// will impact the candidate field annotation in case candidate is unmarked from removal.
+						JAnnotationUse xmlElementAnnotation = originalImplField.annotate(xmlElementModelClass);
+						JAnnotationUse xmlElementCandidateAnnotation = getAnnotation(candidate.getField(),
+						        xmlElementModelClass);
+
+						// xmlElementOriginalAnnotation can be null:
+						JExpression xmlName = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "name");
+						if (xmlName != null) {
+							xmlElementAnnotation.param("name", xmlName);
+						}
+						else {
+							xmlElementAnnotation.param("name", candidate.getFieldName());
 						}
 
-						xmlElementInfoWasTransferred = true;
+						JExpression xmlNamespace = getAnnotationMemberExpression(xmlElementCandidateAnnotation,
+						        "namespace");
+						if (xmlNamespace != null) {
+							xmlElementAnnotation.param("namespace", xmlNamespace);
+						}
+						else if (candidate.getFieldTargetNamespace() != null) {
+							xmlElementAnnotation.param("namespace", candidate.getFieldTargetNamespace());
+						}
 
-						addAnnotation(originalImplField, annotation);
+						JExpression type = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "type");
+						if (type != null) {
+							xmlElementAnnotation.param("type", type);
+						}
+
+						JExpression required = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "defaultValue");
+						if (required != null) {
+							xmlElementAnnotation.param("defaultValue", required);
+						}
+
+						JExpression nillable = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "nillable");
+						if (nillable != null) {
+							xmlElementAnnotation.param("nillable", nillable);
+						}
+					}
+
+					JAnnotationUse adapterAnnotation = getAnnotation(candidate.getField(), xmlJavaTypeAdapterModelClass);
+
+					if (adapterAnnotation != null) {
+						addAnnotation(originalImplField, adapterAnnotation);
 					}
 				}
-
-				if (!xmlElementInfoWasTransferred) {
-					// Annotate the field with the @XmlElement annotation using the field name from the wrapped type as name.
-					// We cannot just re-use the same annotation object instance, as for example, we need to set XML name and this
-					// will impact the candidate field annotation in case candidate is unmarked from removal.
-					JAnnotationUse xmlElementAnnotation = originalImplField.annotate(xmlElementModelClass);
-					JAnnotationUse xmlElementCandidateAnnotation = getAnnotation(candidate.getField(),
-					            xmlElementModelClass);
-
-					// xmlElementOriginalAnnotation can be null:
-					JExpression xmlName = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "name");
-					if (xmlName != null) {
-						xmlElementAnnotation.param("name", xmlName);
-					}
-					else {
-						xmlElementAnnotation.param("name", candidate.getFieldName());
-					}
-
-					JExpression xmlNamespace = getAnnotationMemberExpression(xmlElementCandidateAnnotation,
-					            "namespace");
-					if (xmlNamespace != null) {
-						xmlElementAnnotation.param("namespace", xmlNamespace);
-					}
-					else if (candidate.getFieldTargetNamespace() != null) {
-						xmlElementAnnotation.param("namespace", candidate.getFieldTargetNamespace());
-					}
-
-					JExpression type = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "type");
-					if (type != null) {
-						xmlElementAnnotation.param("type", type);
-					}
-
-					JExpression required = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "defaultValue");
-					if (required != null) {
-						xmlElementAnnotation.param("defaultValue", required);
-					}
-
-					JExpression nillable = getAnnotationMemberExpression(xmlElementCandidateAnnotation, "nillable");
-					if (nillable != null) {
-						xmlElementAnnotation.param("nillable", nillable);
-					}
-				}
-
-				JAnnotationUse adapterAnnotation = getAnnotation(candidate.getField(), xmlJavaTypeAdapterModelClass);
-
-				if (adapterAnnotation != null) {
-					addAnnotation(originalImplField, adapterAnnotation);
+				else {
+					JType adapter = generateAdapter(codeModel, targetClass, fieldConfiguration, candidate, xmlAdapterModelClass, fieldType, interfaceClass, implClass, mapEntryModelClass);
+					originalImplField.annotate(xmlJavaTypeAdapterModelClass).param("value", adapter);
 				}
 
 				// Same as fieldName, but used as getter/setter method name:
@@ -430,12 +489,12 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				JDefinedClass implementationInterface = null;
 
 				for (Iterator<JClass> iter = targetClass._implements(); iter.hasNext();) {
-					JClass interfaceClass = iter.next();
+					JClass aInterfaceClass = iter.next();
 
 					// If value class implements some JVM interface it is not considered as such interface cannot be modified:
-					if (interfaceClass instanceof JDefinedClass
-					            && deleteSettersGetters((JDefinedClass) interfaceClass, propertyName)) {
-						implementationInterface = (JDefinedClass) interfaceClass;
+					if (aInterfaceClass instanceof JDefinedClass
+					            && deleteSettersGetters((JDefinedClass) aInterfaceClass, propertyName)) {
+						implementationInterface = (JDefinedClass) aInterfaceClass;
 						break;
 					}
 				}
@@ -472,17 +531,18 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				propertyInfoClone.setName(true, propertyName);
 
 				setPrivateField(field, "prop", propertyInfoClone);
-				setPrivateField(field, "exposedType", collectionInterfaceClass);
+				setPrivateField(field, "exposedType", interfaceClass);
+
 
 				// Add a new getter method returning the (wrapped) field added.
 				// GENERATED CODE: public I<T> getFieldName() { ... return fieldName; }
-				JMethod getterMethod = targetClass.method(JMod.PUBLIC, collectionInterfaceClass, "get" + propertyName);
+				JMethod getterMethod = targetClass.method(JMod.PUBLIC, interfaceClass, "get" + propertyName);
 
 				if (fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.LAZY) {
 					logger.debug("Applying LAZY instantiation...");
 					// GENERATED CODE: if (fieldName == null) fieldName = new C<T>();
 					getterMethod.body()._if(JExpr.ref(fieldName).eq(JExpr._null()))._then().assign(JExpr.ref(fieldName),
-					            JExpr._new(collectionImplClass));
+					            JExpr._new(implClass));
 				}
 
 				// GENERATED CODE: return "fieldName";
@@ -493,15 +553,15 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				JMethod setterMethod = targetClass.method(JMod.PUBLIC, codeModel.VOID, "set" + propertyName);
 
 				setterMethod.body().assign(JExpr._this().ref(fieldName),
-				            setterMethod.param(collectionInterfaceClass, fieldName));
+				            setterMethod.param(interfaceClass, fieldName));
 
 				// Modify interface as well:
 				if (implementationInterface != null) {
 					writeSummary("\tCorrecting interface " + implementationInterface.fullName());
 
-					implementationInterface.method(JMod.PUBLIC, collectionInterfaceClass, "get" + propertyName);
+					implementationInterface.method(JMod.PUBLIC, interfaceClass, "get" + propertyName);
 					setterMethod = implementationInterface.method(JMod.PUBLIC, codeModel.VOID, "set" + propertyName);
-					setterMethod.param(collectionInterfaceClass, fieldName);
+					setterMethod.param(interfaceClass, fieldName);
 				}
 
 				// Adapt factory class:
@@ -528,6 +588,48 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 		Ring.end(null);
 
 		logger.debug("Done");
+	}
+
+	private JType generateAdapter(JCodeModel codeModel, JDefinedClass targetClass, ClassConfiguration fieldConfiguration, Candidate candidate, JClass xmlAdapterModelClass, JClass fieldType, JClass interfaceClass, JClass implClass, JClass mapEntryModelClass) {
+		try {
+			JFieldVar keyFieldVar = candidate.getFieldParametrisationImpl().fields().get(fieldConfiguration.toMap().getKey());
+			String value = fieldConfiguration.toMap().getValue();
+			if (value == null) {
+				value = "value";
+			}
+			JFieldVar valueFieldVar = candidate.getFieldParametrisationImpl().fields().get(value);
+
+			JDefinedClass jDefinedClass = targetClass._class(JMod.STATIC, candidate.getClazz().name() + "Adapter");
+			jDefinedClass._extends(xmlAdapterModelClass.narrow(fieldType, interfaceClass));
+			JMethod unmarshal = jDefinedClass.method(JMod.PUBLIC, interfaceClass, "unmarshal");
+			unmarshal.annotate(Override.class);
+			unmarshal.param(fieldType, "v");
+			unmarshal._throws(Exception.class);
+			unmarshal.body().decl(interfaceClass, "ret", JExpr._null());
+			JBlock ifBlock = unmarshal.body()._if(JExpr.ref("v").ne(JExpr._null()))._then();
+			ifBlock.assign(JExpr.ref("ret"), JExpr._new(implClass));
+			ifBlock = ifBlock._if(JExpr.ref("v").ref(candidate.getField()).ne(JExpr._null()))._then();
+			JForEach forEachUnmarshal = ifBlock.forEach(candidate.getFieldParametrisationImpl(), "entry", JExpr.ref("v").ref(candidate.getField()));
+			forEachUnmarshal.body().add(JExpr.ref("ret").invoke("put").arg(JExpr.ref("entry").ref(keyFieldVar)).arg(valueFieldVar != null ? JExpr.ref("entry").ref(valueFieldVar) : JExpr.ref("entry")));
+			unmarshal.body()._return(JExpr.ref("ret"));
+			JMethod marshal = jDefinedClass.method(JMod.PUBLIC, fieldType, "marshal");
+			marshal.annotate(Override.class);
+			marshal.param(interfaceClass, "v");
+			marshal._throws(Exception.class);
+			marshal.body().decl(fieldType, "ret", JExpr._null());
+			ifBlock = marshal.body()._if(JExpr.ref("v").ne(JExpr._null()))._then();
+			ifBlock.assign(JExpr.ref("ret"), JExpr._new(fieldType));
+			ifBlock.assign(JExpr.ref("ret").ref(candidate.getField()), JExpr._new(codeModel.ref(fieldConfiguration.getCollectionImplClass()).narrow(candidate.getFieldClass().getTypeParameters())));
+			JForEach marshalForEach = ifBlock.forEach(mapEntryModelClass.narrow(interfaceClass.getTypeParameters()), "entry", JExpr.ref("v").invoke("entrySet"));
+			JVar instance = marshalForEach.body().decl(candidate.getFieldParametrisationImpl(), "instance", JExpr._new(candidate.getFieldParametrisationImpl()));
+			marshalForEach.body().assign(JExpr.ref("instance").ref(keyFieldVar), JExpr.ref("entry").ref("getKey()"));
+			marshalForEach.body().assign(valueFieldVar != null ? JExpr.ref("instance").ref(valueFieldVar) : JExpr.ref("instance"), JExpr.ref("entry").ref("getValue()"));
+			marshalForEach.body().add(JExpr.ref("ret").ref(candidate.getField()).invoke("add").arg(instance));
+			marshal.body()._return(JExpr.ref("ret"));
+			return jDefinedClass;
+		} catch (JClassAlreadyExistsException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**

@@ -47,6 +47,16 @@ public class CommonConfiguration {
 		COLLECTION_INTERFACE("collectionInterface"),
 
 		/**
+		 * Collection implementation class name.
+		 */
+		MAP_IMPLEMENTATION("map"),
+
+		/**
+		 * Map implementation class name.
+		 */
+		MAP_INTERFACE("mapInterface"),
+
+		/**
 		 * Instantiation mode.
 		 */
 		INSTANTIATION_MODE("instantiate"),
@@ -57,6 +67,11 @@ public class CommonConfiguration {
 		 * {@code Ring.get(BIGlobalBinding.class).isSimpleMode();}.
 		 */
 		APPLY_PLURAL_FORM("plural"),
+
+		/**
+		 * Convert this class to a map
+		 */
+		TO_MAP("toMap"),
 
 		/**
 		 * Exclude class from being a candidate or field for being substituted.
@@ -133,6 +148,8 @@ public class CommonConfiguration {
 	public CommonConfiguration() {
 		configurationValues.put(ConfigurationOption.COLLECTION_IMPLEMENTATION, java.util.ArrayList.class);
 		configurationValues.put(ConfigurationOption.COLLECTION_INTERFACE, java.util.List.class);
+		configurationValues.put(ConfigurationOption.MAP_IMPLEMENTATION, java.util.LinkedHashMap.class);
+		configurationValues.put(ConfigurationOption.MAP_INTERFACE, java.util.Map.class);
 		configurationValues.put(ConfigurationOption.INSTANTIATION_MODE, InstantiationMode.EARLY);
 		configurationValues.put(ConfigurationOption.APPLY_PLURAL_FORM, Boolean.FALSE);
 	}
@@ -162,6 +179,28 @@ public class CommonConfiguration {
 
 	public void setCollectionInterfaceClass(Class<?> collectionInterfaceClass) {
 		configurationValues.put(ConfigurationOption.COLLECTION_INTERFACE, collectionInterfaceClass);
+	}
+
+	/**
+	 * Returns the value of {@code collection} option. By default returns {@link java.util.ArrayList}.
+	 */
+	public Class<?> getMapImplClass() {
+		return (Class<?>) configurationValues.get(ConfigurationOption.MAP_IMPLEMENTATION);
+	}
+
+	public void setMapImplClass(Class<?> collectionImplClass) {
+		configurationValues.put(ConfigurationOption.MAP_IMPLEMENTATION, collectionImplClass);
+	}
+
+	/**
+	 * Returns the value of {@code collectionInterface} option. By default returns {@link java.util.List}.
+	 */
+	public Class<?> getMapInterfaceClass() {
+		return (Class<?>) configurationValues.get(ConfigurationOption.MAP_INTERFACE);
+	}
+
+	public void setMapInterfaceClass(Class<?> collectionInterfaceClass) {
+		configurationValues.put(ConfigurationOption.MAP_INTERFACE, collectionInterfaceClass);
 	}
 
 	/**
