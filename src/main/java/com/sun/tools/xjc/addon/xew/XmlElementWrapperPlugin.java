@@ -149,8 +149,8 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 		writeSummary("  Summary file         : "
 		            + ObjectUtils.defaultIfNull(globalConfiguration.getSummaryFileName(), "<none>"));
 		writeSummary("  Instantiation mode   : " + globalConfiguration.getInstantiationMode());
-		writeSummary("  Collection impl      : " + globalConfiguration.getCollectionImplClass().getName());
-		writeSummary("  Collection interface : " + globalConfiguration.getCollectionInterfaceClass().getName());
+		writeSummary("  Collection impl      : " + globalConfiguration.getCollectionImplClass());
+		writeSummary("  Collection interface : " + globalConfiguration.getCollectionInterfaceClass());
 		writeSummary("  Plural form          : " + globalConfiguration.isApplyPluralForm());
 		writeSummary("");
 
