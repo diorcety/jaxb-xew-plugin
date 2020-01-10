@@ -136,8 +136,8 @@ public class CommonConfiguration {
 	}
 
 	public CommonConfiguration() {
-		configurationValues.put(ConfigurationOption.COLLECTION_IMPLEMENTATION, java.util.ArrayList.class);
-		configurationValues.put(ConfigurationOption.COLLECTION_INTERFACE, java.util.List.class);
+		configurationValues.put(ConfigurationOption.COLLECTION_IMPLEMENTATION, java.util.ArrayList.class.getName());
+		configurationValues.put(ConfigurationOption.COLLECTION_INTERFACE, java.util.List.class.getName());
 		configurationValues.put(ConfigurationOption.INSTANTIATION_MODE, InstantiationMode.EARLY);
 		configurationValues.put(ConfigurationOption.APPLY_PLURAL_FORM, Boolean.FALSE);
 	}
@@ -150,22 +150,22 @@ public class CommonConfiguration {
 	/**
 	 * Returns the value of {@code collection} option. By default returns {@link java.util.ArrayList}.
 	 */
-	public Class<?> getCollectionImplClass() {
-		return (Class<?>) configurationValues.get(ConfigurationOption.COLLECTION_IMPLEMENTATION);
+	public String getCollectionImplClass() {
+		return (String) configurationValues.get(ConfigurationOption.COLLECTION_IMPLEMENTATION);
 	}
 
-	public void setCollectionImplClass(Class<?> collectionImplClass) {
+	public void setCollectionImplClass(String collectionImplClass) {
 		configurationValues.put(ConfigurationOption.COLLECTION_IMPLEMENTATION, collectionImplClass);
 	}
 
 	/**
 	 * Returns the value of {@code collectionInterface} option. By default returns {@link java.util.List}.
 	 */
-	public Class<?> getCollectionInterfaceClass() {
-		return (Class<?>) configurationValues.get(ConfigurationOption.COLLECTION_INTERFACE);
+	public String getCollectionInterfaceClass() {
+		return (String) configurationValues.get(ConfigurationOption.COLLECTION_INTERFACE);
 	}
 
-	public void setCollectionInterfaceClass(Class<?> collectionInterfaceClass) {
+	public void setCollectionInterfaceClass(String collectionInterfaceClass) {
 		configurationValues.put(ConfigurationOption.COLLECTION_INTERFACE, collectionInterfaceClass);
 	}
 
@@ -196,8 +196,8 @@ public class CommonConfiguration {
 	}
 
 	protected ToStringBuilder appendProperties(ToStringBuilder builder) {
-		builder.append("collectionImplClass", getCollectionImplClass().getName());
-		builder.append("collectionInterfaceClass", getCollectionInterfaceClass().getName());
+		builder.append("collectionImplClass", getCollectionImplClass());
+		builder.append("collectionInterfaceClass", getCollectionInterfaceClass());
 		builder.append("instantiationMode", getInstantiationMode());
 		builder.append("applyPluralForm", isApplyPluralForm());
 

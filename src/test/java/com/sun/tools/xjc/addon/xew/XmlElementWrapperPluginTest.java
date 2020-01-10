@@ -99,11 +99,6 @@ public class XmlElementWrapperPluginTest {
 		runTest("element-list-extended", new String[] { "-Xxew:control invalid" }, false);
 	}
 
-	@Test(expected = BadCommandLineException.class)
-	public void testInvalidCollectionClass() throws Exception {
-		runTest("element-list-extended", new String[] { "-Xxew:collection badvalue" }, false);
-	}
-
 	@Test(expected = IllegalArgumentException.class)
 	public void testInvalidCustomization() throws Exception {
 		runTest("element-with-invalid-customization", null, false);

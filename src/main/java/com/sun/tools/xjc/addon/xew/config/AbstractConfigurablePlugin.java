@@ -194,10 +194,10 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 			((GlobalConfiguration) configuration).initSummaryWriter(value);
 			break;
 		case COLLECTION_IMPLEMENTATION:
-			configuration.setCollectionImplClass(Class.forName(value));
+			configuration.setCollectionImplClass(value);
 			break;
 		case COLLECTION_INTERFACE:
-			configuration.setCollectionInterfaceClass(Class.forName(value));
+			configuration.setCollectionInterfaceClass(value);
 			break;
 		case INSTANTIATION_MODE:
 			try {
