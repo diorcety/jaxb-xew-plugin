@@ -112,7 +112,7 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 	 *            list of arguments
 	 * @param index
 	 *            current index
-	 * @param optionName
+	 * @param option
 	 *            the option to match
 	 * @return number of arguments processed
 	 */
