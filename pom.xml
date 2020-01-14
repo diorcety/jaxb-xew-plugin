@@ -52,7 +52,7 @@
 	</licenses>
 
 	<properties>
-		<jaxb.version>2.2.11</jaxb.version>
+		<jaxb.version>2.3.0</jaxb.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
