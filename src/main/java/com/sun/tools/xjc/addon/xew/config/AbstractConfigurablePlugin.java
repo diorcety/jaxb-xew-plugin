@@ -59,6 +59,10 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 		return Arrays.asList(XEW_QNAME);
 	}
 
+	public GlobalConfiguration getGlobalConfiguration() {
+		return globalConfiguration;
+	}
+
 	private void initLoggerIfNecessary(Options opts) {
 		if (logger != null) {
 			return;
@@ -93,7 +97,7 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 	}
 
 	@Override
-	public void onActivated(Options opts) {
+	public void onActivated(Options opts) throws BadCommandLineException {
 		initLoggerIfNecessary(opts);
 	}
 
@@ -242,8 +246,8 @@ public abstract class AbstractConfigurablePlugin extends AbstractParameterizable
 	/**
 	 * Clone given configuration and apply settings from global/class/field JAXB customization.
 	 */
-	protected static <T extends CommonConfiguration> T applyConfigurationFromCustomizations(
-	            CommonConfiguration configuration, CCustomizations customizations, boolean cloneClassConfiguration)
+	public static <T extends CommonConfiguration> T applyConfigurationFromCustomizations(
+			CommonConfiguration configuration, CCustomizations customizations, boolean cloneClassConfiguration)
 	            throws IOException, ClassNotFoundException {
 		CPluginCustomization customization = customizations.find(XEW_QNAME.getNamespaceURI(), XEW_QNAME.getLocalPart());
 

@@ -80,10 +80,14 @@ import com.sun.codemodel.JMod;
 import com.sun.codemodel.JPackage;
 import com.sun.codemodel.JType;
 import com.sun.codemodel.JVar;
+import com.sun.tools.xjc.BadCommandLineException;
 import com.sun.tools.xjc.Options;
 import com.sun.tools.xjc.addon.xew.config.AbstractConfigurablePlugin;
 import com.sun.tools.xjc.addon.xew.config.ClassConfiguration;
 import com.sun.tools.xjc.addon.xew.config.CommonConfiguration;
+import com.sun.tools.xjc.addon.xew.field.UntypedListFieldRenderer;
+import com.sun.tools.xjc.generator.bean.field.FieldRenderer;
+import com.sun.tools.xjc.generator.bean.field.FieldRendererFactory;
 import com.sun.tools.xjc.model.CElementPropertyInfo;
 import com.sun.tools.xjc.model.CElementPropertyInfo.CollectionMode;
 import com.sun.tools.xjc.model.CPropertyInfo;
@@ -114,6 +118,55 @@ import org.jvnet.jaxb2_commons.util.CustomizationUtils;
 public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 
 	static final String FACTORY_CLASS_NAME = "ObjectFactory";
+
+	@Override
+	public void onActivated(Options opts) throws BadCommandLineException {
+		super.onActivated(opts);
+
+		final FieldRendererFactory originalFieldRendererFactory = opts.getFieldRendererFactory();
+		opts.setFieldRendererFactory(new FieldRendererFactory() {
+
+			@Override
+			public FieldRenderer getArray() {
+				return originalFieldRendererFactory.getArray();
+			}
+
+			@Override
+			public FieldRenderer getRequiredUnboxed() {
+				return originalFieldRendererFactory.getRequiredUnboxed();
+			}
+
+			@Override
+			public FieldRenderer getSingle() {
+				return originalFieldRendererFactory.getSingle();
+			}
+
+			@Override
+			public FieldRenderer getSinglePrimitiveAccess() {
+				return originalFieldRendererFactory.getSinglePrimitiveAccess();
+			}
+
+			@Override
+			public FieldRenderer getConst(FieldRenderer fallback) {
+				return originalFieldRendererFactory.getConst(fallback);
+			}
+
+			@Override
+			public FieldRenderer getList(JClass coreList) {
+				return new UntypedListFieldRenderer();
+			}
+
+			@Override
+			public FieldRenderer getContentList(JClass coreList) {
+				return new UntypedListFieldRenderer(false, true);
+			}
+
+			@Override
+			public FieldRenderer getDummyList(JClass coreList) {
+				return new UntypedListFieldRenderer(true, false);
+			}
+		}, null);
+	}
 
 	@Override
 	protected void runInternal(Outline outline) throws ClassNotFoundException, IOException {
