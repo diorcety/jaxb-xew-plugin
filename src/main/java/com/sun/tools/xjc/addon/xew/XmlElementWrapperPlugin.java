@@ -36,6 +36,7 @@ import static com.sun.tools.xjc.addon.xew.CommonUtils.removeAnnotation;
 import static com.sun.tools.xjc.addon.xew.CommonUtils.setPrivateField;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -97,9 +98,10 @@ import com.sun.tools.xjc.outline.FieldOutline;
 import com.sun.tools.xjc.outline.Outline;
 import com.sun.tools.xjc.reader.Ring;
 import com.sun.xml.bind.api.impl.NameConverter;
+import com.sun.xml.xsom.XSComplexType;
 import com.sun.xml.xsom.XSComponent;
 import com.sun.xml.xsom.XSDeclaration;
-
+import com.sun.xml.xsom.XSParticle;
 import org.apache.commons.lang3.ObjectUtils;
 import org.jvnet.jaxb2_commons.util.CustomizationUtils;
 
@@ -407,7 +409,7 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				originalImplField.type(interfaceClass);
 
 				// If instantiation is specified to be "early", add code for creating new instance of the collection class.
-				if (fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.EARLY) {
+				if (isEarly(fieldConfiguration, candidate)) {
 					logger.debug("Applying EARLY instantiation...");
 					// GENERATED CODE: ... fieldName = new C<T>();
 					originalImplField.init(JExpr._new(implClass));
@@ -591,7 +593,7 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 				// GENERATED CODE: public I<T> getFieldName() { ... return fieldName; }
 				JMethod getterMethod = targetClass.method(JMod.PUBLIC, interfaceClass, "get" + propertyName);
 
-				if (fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.LAZY) {
+				if (isLazy(fieldConfiguration, candidate)) {
 					logger.debug("Applying LAZY instantiation...");
 					// GENERATED CODE: if (fieldName == null) fieldName = new C<T>();
 					getterMethod.body()._if(JExpr.ref(fieldName).eq(JExpr._null()))._then().assign(JExpr.ref(fieldName),
@@ -641,6 +643,44 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 		Ring.end(null);
 
 		logger.debug("Done");
+	}
+
+	private boolean isEarly(ClassConfiguration fieldConfiguration, Candidate candidate) {
+		if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.EARLY) {
+			return true;
+		} else if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.LAZY) {
+			return false;
+		} else if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.NONE) {
+			return false;
+		} else {
+			if(candidate.getClazzInfo().getSchemaComponent() instanceof XSComplexType) {
+				XSComplexType complexType = (XSComplexType) candidate.getClazzInfo().getSchemaComponent();
+				XSParticle particle = complexType.getContentType().asParticle();
+				if (particle != null) {
+					return particle.getMinOccurs().compareTo(BigInteger.valueOf(0)) > 0;
+				}
+			}
+			return false;
+		}
+	}
+
+	private boolean isLazy(ClassConfiguration fieldConfiguration, Candidate candidate) {
+		if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.EARLY) {
+			return false;
+		} else if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.LAZY) {
+			return true;
+		} else if(fieldConfiguration.getInstantiationMode() == CommonConfiguration.InstantiationMode.NONE) {
+			return false;
+		} else {
+			if(candidate.getClazzInfo().getSchemaComponent() instanceof XSComplexType) {
+				XSComplexType complexType = (XSComplexType) candidate.getClazzInfo().getSchemaComponent();
+				XSParticle particle = complexType.getContentType().asParticle();
+				if (particle != null) {
+					return particle.getMinOccurs().compareTo(BigInteger.valueOf(0)) == 0;
+				}
+			}
+			return true;
+		}
 	}
 
 	private JType generateAdapter(JCodeModel codeModel, JDefinedClass targetClass, ClassConfiguration fieldConfiguration, Candidate candidate, JClass xmlAdapterModelClass, JClass fieldType, JClass interfaceClass, JClass implClass, JClass mapEntryModelClass) {

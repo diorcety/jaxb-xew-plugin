@@ -30,6 +30,8 @@ import com.sun.xml.xsom.XSDeclaration;
 public final class Candidate {
 	private final JDefinedClass					 candidateClass;
 
+	private final CClassInfo					 candidateClassInfo;
+
 	private final JFieldVar						 field;
 
 	private final CPropertyInfo					 fieldPropertyInfo;
@@ -61,6 +63,7 @@ public final class Candidate {
 	            JDefinedClass fieldParametrizationClass, JDefinedClass fieldParametrisationImpl,
 	            JClass xmlElementDeclModelClass, JClass xmlSchemaModelClass) {
 		this.candidateClass = candidateClass;
+		this.candidateClassInfo = candidateClassInfo;
 		this.field = field;
 		this.fieldPropertyInfo = candidateClassInfo.getProperty(field.name());
 		this.fieldParametrisationClass = fieldParametrizationClass;
@@ -116,6 +119,10 @@ public final class Candidate {
 	 */
 	public JDefinedClass getClazz() {
 		return candidateClass;
+	}
+
+	public CClassInfo getClazzInfo() {
+		return candidateClassInfo;
 	}
 
 	/**
