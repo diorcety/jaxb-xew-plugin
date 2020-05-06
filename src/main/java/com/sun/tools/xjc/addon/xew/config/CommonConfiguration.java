@@ -102,6 +102,11 @@ public class CommonConfiguration {
 		LAZY,
 
 		/**
+		 * Collection is initialized following the cardinality of the element
+		 */
+		MIXED,
+
+		/**
 		 * Collection is never initialized. It's consumers responsibility to set the property to some collection
 		 * instance.
 		 */
