@@ -347,6 +347,21 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 					fieldTypeParametrisations.add(type.boxify());
 				}
 
+				// Unmark types used
+				for (JClass fieldTypeParametrisation : fieldTypeParametrisations) {
+					for (Candidate c : candidatesMap.values()) {
+						// Skip fields with basic types as for example any class can be casted to Object.
+						if (fieldTypeParametrisation.isAssignableFrom(c.getClazz()) && !isHiddenClass(fieldTypeParametrisation)) {
+							c.unmarkForRemoval();
+						}
+						// If the candidate T is referred from list of parametrisations (e.g. List<T>), it cannot be removed.
+						// However field substitutions will take place.
+						else if (isListedAsParametrisation(c.getClazz(), fieldTypeParametrisation)) {
+							c.unmarkForRemoval();
+						}
+					}
+				}
+
 				// Create the new interface and collection classes using the specified interface and
 				// collection classes (configuration) with an element type corresponding to
 				// the element type from the collection present in the candidate class (narrowing).
