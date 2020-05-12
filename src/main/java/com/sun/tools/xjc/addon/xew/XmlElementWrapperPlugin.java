@@ -473,6 +473,7 @@ public class XmlElementWrapperPlugin extends AbstractConfigurablePlugin {
 
 				setPrivateField(field, "prop", propertyInfoClone);
 				setPrivateField(field, "exposedType", collectionInterfaceClass);
+				setPrivateField(field, "implType", collectionImplClass);
 
 				// Add a new getter method returning the (wrapped) field added.
 				// GENERATED CODE: public I<T> getFieldName() { ... return fieldName; }
